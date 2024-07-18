@@ -1,0 +1,385 @@
+openapi: "3.0.2"
+info:
+  title: ProgateHackathon_vol3
+  version: "1.0"
+servers:
+  - url: http://localhost:3000
+    description: Development server
+paths:
+  /users/{userid}:
+    get:
+      tags:
+        - ユーザー関連
+      summary: アカウントの情報を取得
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON array of User model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              example:
+                - id: 0x0001
+                  name: "user1"
+                  faceimguri: "https://hoge/hoge"
+                  githuburl: "https://github.com/hoge"
+                  xurl: "https://x.com/hoge"
+    patch: #他人のアカウントを更新することはできない
+      tags:
+        - ユーザー関連
+      summary: 自分のアカウントの情報を更新
+      description: Update a user with the given User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/User"
+            example:
+              name: "user2"
+              faceimguri: "https://hoge/fuga"
+              githuburl: "https://github.com/fuga"
+              xurl: "https://x.com/fuga"
+      responses:
+        "200":
+          description: A JSON object of User model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              example:
+                id: 0x0001
+                name: "user2"
+                faceimguri: "https://hoge/fuga"
+                githuburl: "https://github.com/fuga"
+                xurl: "https://x.com/fuga"
+    delete: #他人のアカウントを削除することはできない
+      tags:
+        - ユーザー関連
+      summary: 自分のアカウントを削除
+      description: Delete your account.
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON object of User model
+          content:
+            application/json:
+              example: User deleted
+  /friends/{userid}: #他人の友達一覧を取得することはできない
+    get:
+      tags:
+        - フレンド関連
+      summary: 友達一覧を取得
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON array of User model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+              example:
+                - id: 0x0001
+                  name: "user1"
+                  faceimguri: "https://hoge/hoge"
+                - id: 0x0002
+                  name: "user2"
+                  faceimguri: "https://hoge/fuga"
+    post:
+      tags:
+        - フレンド関連
+      summary: 友達追加
+      description: Add a user with the given id
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: ID of user to friend
+          required: true
+          schema:
+            type: integer
+            format: hex
+        - name: friendid
+          in: query
+          description: ID of user to friend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON object of User model
+          content:
+            application/json:
+              example: User friended
+    delete:
+      tags:
+        - フレンド関連
+      summary: 友達削除
+      description: Remove a user with the given id
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+        - name: friendid
+          in: query
+          description: ID of user to friend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON object of User model
+          content:
+            application/json:
+              example: User unfriended
+  /photos/{userid}:
+    get:
+      # サーバーからクライアントに通知を送る
+      # 写真が保存できるまで、定期的にリクエストを送る
+      tags:
+        - 画像関連
+      summary: 写真を取得
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON array of User model
+          content:
+            multipart/form-data:
+              schema:
+                type: object
+                properties:
+                  photo:
+                    type: string
+                    format: binary
+                    description: アップロードする写真
+    post:
+      tags:
+        - 画像関連
+      summary: 写真を撮ったユーザーと、画像を送信
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: query
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                photo:
+                  type: string
+                  format: binary
+                  description: アップロードする写真
+      responses:
+        "200":
+          description: Message
+          content:
+            application/json:
+              example: Photo uploaded
+  /position/{userid}:
+    get:
+      tags:
+        - 位置情報関連
+      summary: 位置情報を取得
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: path
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      responses:
+        "200":
+          description: A JSON array of User model
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+              example:
+                - userid: 0x0001
+                  position: true
+    post:
+      tags:
+        - 位置情報関連
+      summary: 位置情報を送信
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: query
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Position"
+            example:
+              userid: 0x0001
+              position: true
+      responses:
+        "200":
+          description: Message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+              example:
+                position: true
+    patch:
+      tags:
+        - 位置情報関連
+      summary: 位置情報を更新
+      description: Returns an array of User model
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: userid
+          in: query
+          description: ID of user to unfriend
+          required: true
+          schema:
+            type: integer
+            format: hex
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/Position"
+            example:
+              userid: 0x0001
+              position: false
+      responses:
+        "200":
+          description: Message
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+              example:
+                position: false
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    User:
+      type: object
+      required:
+        - id
+        - name
+        - faceimguri
+      properties:
+        id:
+          type: integer
+          format: hex
+        name:
+          type: string
+        faceimguri:
+          type: string
+        githuburl:
+          type: string
+        xurl:
+          type: string
+    Friend:
+      type: object
+      required:
+        - userid
+        - friendid
+      properties:
+        userid:
+          type: integer
+          format: hex
+        friendid:
+          type: integer
+          format: hex
+    Position:
+      type: object
+      required:
+        - userid
+        - position
+      properties:
+        userid:
+          type: integer
+          format: hex
+        position:
+          type: boolean
