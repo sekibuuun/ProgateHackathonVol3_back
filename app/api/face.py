@@ -1,4 +1,20 @@
+from fastapi import FastAPI, File, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
+import nest_asyncio
+from pyngrok import ngrok
+import uvicorn
 import face_recognition
+from io import BytesIO
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=['*'],
+    allow_credentials=True,
+    allow_methods=['*'],
+    allow_headers=['*'],
+)
 
 # ユーザーIDと顔エンコーディングのペアを保持するクラス
 class KnownFace:
@@ -6,7 +22,8 @@ class KnownFace:
         self.user_id = user_id
         self.face_encoding = face_encoding
 
-def detect_faces_excluding_user(group_photo_path, exclude_user_id):
+@app.post("/detect_faces/{exclude_user_id}")
+async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = File(...)):
     # 既知のユーザーIDと対応する画像パスのリスト
     known_faces_data = [
         (1, "A.jpg"),
@@ -20,16 +37,15 @@ def detect_faces_excluding_user(group_photo_path, exclude_user_id):
         face_encoding = face_recognition.face_encodings(image)[0]
         known_faces.append(KnownFace(user_id=user_id, face_encoding=face_encoding))
 
-    # 新しく撮った写真（複数人が写っているもの）を読み込む
-    group_photo = face_recognition.load_image_file(group_photo_path)
+    # アップロードされた写真を読み込む
+    group_photo = face_recognition.load_image_file(BytesIO(await file.read()))
 
     # 新しい写真から顔の位置を検出
     face_locations = face_recognition.face_locations(group_photo)
 
     # 顔が検出されない場合の処理
     if not face_locations:
-        print("顔が検出されませんでした。")
-        return []
+        return {"message": "顔が検出されませんでした。", "detected_userids": []}
 
     print(f"{len(face_locations)} 人の顔が検出されました。")
 
@@ -58,10 +74,13 @@ def detect_faces_excluding_user(group_photo_path, exclude_user_id):
             detected_userids.append(userid)
 
     # 検出されたユーザーIDを出力
-    print(f"検出されたユーザーID: {detected_userids}")
-    return detected_userids
+    return {"detected_userids": detected_userids}
 
-# グループ写真から特定のユーザーIDを除外して顔を検出
-group_photo_path = "C.jpg"
-exclude_user_id = 1  # ここで除外したいユーザーIDを指定
-detect_faces_excluding_user(group_photo_path, exclude_user_id)
+# ngrokの設定
+ngrok.set_auth_token("TOKEN")  # <YOUR_NGROK_AUTH_TOKEN>をあなたのngrok認証トークンに置き換えてください
+
+ngrok_tunnel = ngrok.connect(8000)
+print('PUBLIC_URL:', ngrok_tunnel.public_url)
+
+nest_asyncio.apply()
+uvicorn.run(app, port=8000)
