@@ -278,7 +278,6 @@ paths:
           content:
             application/json:
               example: position uploaded
-                
     patch:
       tags:
         - 位置情報関連
