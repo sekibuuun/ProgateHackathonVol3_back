@@ -15,7 +15,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - name: id
+        - name: userid
           in: path
           description: ID of user to unfriend
           required: true
@@ -43,7 +43,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - name: id
+        - name: userid
           in: path
           description: ID of user to unfriend
           required: true
@@ -82,7 +82,7 @@ paths:
       security:
         - BearerAuth: []
       parameters:
-        - name: id
+        - name: userid
           in: path
           description: ID of user to unfriend
           required: true
@@ -122,9 +122,13 @@ paths:
                 - id: 0x0001
                   name: "user1"
                   faceimguri: "https://hoge/hoge"
+                  githuburl: "https://github.com/hoge"
+                  xurl: "https://x.com/hoge"
                 - id: 0x0002
                   name: "user2"
                   faceimguri: "https://hoge/fuga"
+                  githuburl: "https://github.com/fuga"
+                  xurl: "https://x.com/fuga"
     post:
       tags:
         - フレンド関連
@@ -244,31 +248,6 @@ paths:
             application/json:
               example: Photo uploaded
   /position/{userid}:
-    get:
-      tags:
-        - 位置情報関連
-      summary: 位置情報を取得
-      description: Returns an array of User model
-      security:
-        - BearerAuth: []
-      parameters:
-        - name: userid
-          in: path
-          description: ID of user to unfriend
-          required: true
-          schema:
-            type: integer
-            format: hex
-      responses:
-        "200":
-          description: A JSON array of User model
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/Position"
-              example:
-                - userid: 0x0001
-                  position: true
     post:
       tags:
         - 位置情報関連
@@ -292,16 +271,14 @@ paths:
               $ref: "#/components/schemas/Position"
             example:
               userid: 0x0001
-              position: true
+              position: [35.681236, 139.767125]
       responses:
         "200":
           description: Message
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Position"
-              example:
-                position: true
+              example: position uploaded
+                
     patch:
       tags:
         - 位置情報関連
@@ -325,16 +302,13 @@ paths:
               $ref: "#/components/schemas/Position"
             example:
               userid: 0x0001
-              position: false
+              position: [35.681236, 139.767125]
       responses:
         "200":
           description: Message
           content:
             application/json:
-              schema:
-                $ref: "#/components/schemas/Position"
-              example:
-                position: false
+              example: position uploaded
 components:
   securitySchemes:
     BearerAuth:
@@ -382,4 +356,7 @@ components:
           type: integer
           format: hex
         position:
-          type: boolean
+          type: array
+          items:
+            type: number
+            format: double
