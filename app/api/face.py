@@ -1,4 +1,4 @@
-from fastapi import FastAPI, File, UploadFile
+from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import nest_asyncio
 import uvicorn
@@ -7,20 +7,17 @@ from io import BytesIO
 import requests
 import os
 from supabase import create_client, Client
+from app.db import supabase
 
-app = FastAPI()
+router = FastAPI()
 
-app.add_middleware(
+router.add_middleware(
     CORSMiddleware,
     allow_origins=['*'],
     allow_credentials=True,
     allow_methods=['*'],
     allow_headers=['*'],
 )
-
-url = os.environ.get("SUPABASE_URL")
-key = os.environ.get("SUPABASE_KEY")
-supabase: Client = create_client(url, key)
 
 # ユーザーIDと顔エンコーディングのペアを保持するクラス
 class KnownFace:
@@ -36,7 +33,7 @@ def get_known_faces_data():
     else:
         raise Exception("Failed to fetch data from Supabase")
 
-@app.post("/detect_faces/{exclude_user_id}")
+@router.post("/detect_faces/{exclude_user_id}")
 async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = File(...)):
     # Supabaseから既知のユーザーIDと対応する画像URLのリストを取得
     known_faces_data = get_known_faces_data()
@@ -86,8 +83,14 @@ async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = F
             detected_userids.append(userid)
 
     # 検出されたユーザーIDを出力
-    return {"detected_userids": detected_userids}
+    # return {"detected_userids": detected_userids}
 
-if __name__ == "__main__":
-    nest_asyncio.apply()
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    friends_data = []
+    for friend_user_id in detected_userids:
+        friend_data_response = supabase.table("users").select("*").eq("id", friend_user_id).execute()
+        if friend_data_response.data:
+            friends_data.append(friend_data_response.data[0])
+        else:
+            raise HTTPException(status_code=404, detail=f"Data for friend with id {friend_user_id} not found")
+
+    return friends_data
