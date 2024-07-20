@@ -1,5 +1,4 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
+from fastapi import FastAPI, File, UploadFile, HTTPException, APIRouter
 import nest_asyncio
 import uvicorn
 import face_recognition
@@ -9,15 +8,7 @@ import os
 from supabase import create_client, Client
 from app.db import supabase
 
-router = FastAPI()
-
-router.add_middleware(
-    CORSMiddleware,
-    allow_origins=['*'],
-    allow_credentials=True,
-    allow_methods=['*'],
-    allow_headers=['*'],
-)
+router = APIRouter()
 
 # ユーザーIDと顔エンコーディングのペアを保持するクラス
 class KnownFace:
@@ -54,9 +45,7 @@ async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = F
 
     # 顔が検出されない場合の処理
     if not face_locations:
-        return {"message": "顔が検出されませんでした。", "detected_userids": []}
-
-    print(f"{len(face_locations)} 人の顔が検出されました。")
+        raise HTTPException(status_code=401, detail="No faces found in the uploaded image")
 
     # 顔エンコーディングを取得
     face_encodings = face_recognition.face_encodings(group_photo, face_locations)
