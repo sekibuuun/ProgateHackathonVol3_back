@@ -12,30 +12,30 @@ router = APIRouter()
 
 # ユーザーIDと顔エンコーディングのペアを保持するクラス
 class KnownFace:
-    def __init__(self, user_id, face_encoding):
-        self.user_id = user_id
+    def __init__(self, id, face_encoding):
+        self.id = id
         self.face_encoding = face_encoding
 
 # Supabaseからデータを取得する関数
 def get_known_faces_data():
-    response = supabase.table("test_user").select("user_id, face_img_uri").execute()
+    response = supabase.table("test_user").select("id, face_img_uri").execute()
     if response.data:
-        return [(item["user_id"], item["face_img_uri"]) for item in response.data]
+        return [(item["id"], item["face_img_uri"]) for item in response.data]
     else:
         raise Exception("Failed to fetch data from Supabase")
 
 @router.post("/detect_faces/{exclude_user_id}")
-async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = File(...)):
+async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = File(...)):
     # Supabaseから既知のユーザーIDと対応する画像URLのリストを取得
     known_faces_data = get_known_faces_data()
 
     # 既知の顔エンコーディングとそれに対応するユーザーIDのリストを作成
     known_faces = []
-    for user_id, image_url in known_faces_data:
+    for id, image_url in known_faces_data:
         response = requests.get(image_url)
         image = face_recognition.load_image_file(BytesIO(response.content))
         face_encoding = face_recognition.face_encodings(image)[0]
-        known_faces.append(KnownFace(user_id=user_id, face_encoding=face_encoding))
+        known_faces.append(KnownFace(id=id, face_encoding=face_encoding))
 
     # アップロードされた写真を読み込む
     group_photo = face_recognition.load_image_file(BytesIO(await file.read()))
@@ -51,31 +51,31 @@ async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = F
     face_encodings = face_recognition.face_encodings(group_photo, face_locations)
 
     # 検出されたユーザーIDを保持するリスト
-    detected_userids = []
+    detected_ids = []
 
     # 検出された各顔について処理
     for face_encoding in face_encodings:
         # 既知の顔と比較
-        matches = face_recognition.compare_faces([face.face_encoding for face in known_faces], face_encoding, tolerance=0.5)
+        matches = face_recognition.compare_faces([face.face_encoding for face in known_faces], face_encoding, tolerance=0.4)
 
-        userid = "unknown"  # デフォルトは "unknown"
+        id = "unknown"  # デフォルトは "unknown"
 
         # 一致する顔が見つかった場合
         if True in matches:
             first_match_index = matches.index(True)
-            userid = known_faces[first_match_index].user_id
+            id = known_faces[first_match_index].user_id
 
             # 引数のuser_idと一致する場合はスキップ
-            if userid == exclude_user_id:
+            if id == exclude_user_id:
                 continue
 
-            detected_userids.append(userid)
+            detected_ids.append(id)
 
     # 検出されたユーザーIDを出力
-    # return {"detected_userids": detected_userids}
+    # return {"detected_ids": detected_ids}
 
     friends_data = []
-    for friend_user_id in detected_userids:
+    for friend_user_id in detected_ids:
         friend_data_response = supabase.table("users").select("*").eq("id", friend_user_id).execute()
         if friend_data_response.data:
             friends_data.append(friend_data_response.data[0])
