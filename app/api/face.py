@@ -5,6 +5,9 @@ from pyngrok import ngrok
 import uvicorn
 import face_recognition
 from io import BytesIO
+import requests
+from google.colab import userdata
+from supabase import create_client, Client
 
 app = FastAPI()
 
@@ -16,24 +19,34 @@ app.add_middleware(
     allow_headers=['*'],
 )
 
+url = userdata.get("SUPABASE_URL")
+key = userdata.get("SUPABASE_KEY")
+supabase: Client = create_client(url, key)
+
 # ユーザーIDと顔エンコーディングのペアを保持するクラス
 class KnownFace:
     def __init__(self, user_id, face_encoding):
         self.user_id = user_id
         self.face_encoding = face_encoding
 
+# Supabaseからデータを取得する関数
+def get_known_faces_data():
+    response = supabase.table("test_user").select("user_id, face_img_uri").execute()
+    if response.data:
+        return [(item["user_id"], item["face_img_uri"]) for item in response.data]
+    else:
+        raise Exception("Failed to fetch data from Supabase")
+
 @app.post("/detect_faces/{exclude_user_id}")
 async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = File(...)):
-    # 既知のユーザーIDと対応する画像パスのリスト
-    known_faces_data = [
-        (1, "A.jpg"),
-        (2, "B.jpg")
-    ]
+    # Supabaseから既知のユーザーIDと対応する画像URLのリストを取得
+    known_faces_data = get_known_faces_data()
 
     # 既知の顔エンコーディングとそれに対応するユーザーIDのリストを作成
     known_faces = []
-    for user_id, image_path in known_faces_data:
-        image = face_recognition.load_image_file(image_path)
+    for user_id, image_url in known_faces_data:
+        response = requests.get(image_url)
+        image = face_recognition.load_image_file(BytesIO(response.content))
         face_encoding = face_recognition.face_encodings(image)[0]
         known_faces.append(KnownFace(user_id=user_id, face_encoding=face_encoding))
 
@@ -77,7 +90,7 @@ async def detect_faces_excluding_user(exclude_user_id: int, file: UploadFile = F
     return {"detected_userids": detected_userids}
 
 # ngrokの設定
-ngrok.set_auth_token("TOKEN")  # <YOUR_NGROK_AUTH_TOKEN>をあなたのngrok認証トークンに置き換えてください
+ngrok.set_auth_token(userdata.get("YOUR_NGROK_AUTH_TOKEN"))  # <YOUR_NGROK_AUTH_TOKEN>をあなたのngrok認証トークンに置き換えてください
 
 ngrok_tunnel = ngrok.connect(8000)
 print('PUBLIC_URL:', ngrok_tunnel.public_url)
