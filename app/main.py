@@ -1,15 +1,11 @@
-from typing import Union
-
+# app/main.py
 from fastapi import FastAPI
+from app.api.user import router as user_router
 
 app = FastAPI()
 
-
 @app.get("/")
-def read_root():
-    return {"Hello": "World"}
+async def root():
+    return {"message": "Hello World"}
 
-
-@app.get("/items/{item_id}")
-def read_item(item_id: int, q: Union[str, None] = None):
-    return {"item_id": item_id, "q": q}
+app.include_router(user_router)
