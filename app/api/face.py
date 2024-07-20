@@ -1,3 +1,4 @@
+
 from fastapi import FastAPI, File, UploadFile, HTTPException, APIRouter
 import nest_asyncio
 import uvicorn
@@ -9,6 +10,7 @@ from supabase import create_client, Client
 from app.db import supabase
 import numpy as np
 from PIL import Image
+import logging
 
 router = APIRouter()
 
@@ -51,6 +53,7 @@ async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = F
 
     # 新しい写真から顔の位置を検出
     face_locations = face_recognition.face_locations(group_photo)
+    logging.getLogger("uvicorn").info(face_locations)
 
     # 顔が検出されない場合の処理
     if not face_locations:
@@ -85,6 +88,8 @@ async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = F
 
     friends_data = []
     for friend_user_id in detected_ids:
+        supabase.table("friend").insert({"user_id": exclude_user_id, "friend_id": friend_user_id}).execute()
+        
         friend_data_response = supabase.table("users").select("*").eq("id", friend_user_id).execute()
         if friend_data_response.data:
             friends_data.append(friend_data_response.data[0])
