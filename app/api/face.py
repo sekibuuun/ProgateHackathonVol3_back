@@ -7,6 +7,8 @@ import requests
 import os
 from supabase import create_client, Client
 from app.db import supabase
+import numpy as np
+from PIL import Image
 
 router = APIRouter()
 
@@ -34,8 +36,15 @@ async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = F
     for id, image_url in known_faces_data:
         response = requests.get(image_url)
         image = face_recognition.load_image_file(BytesIO(response.content))
-        face_encoding = face_recognition.face_encodings(image)[0]
-        known_faces.append(KnownFace(id=id, face_encoding=face_encoding))
+        image = Image.fromarray(image)
+        for angle in range(0, 360, 90):
+            rotated_image = np.array(image.rotate(angle))
+            encodings = face_recognition.face_encodings(rotated_image)
+            if len(encodings) == 0:
+                continue
+            face_encoding = encodings[0]
+            known_faces.append(KnownFace(id=id, face_encoding=face_encoding))
+            break
 
     # アップロードされた写真を読み込む
     group_photo = face_recognition.load_image_file(BytesIO(await file.read()))
