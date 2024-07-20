@@ -1,8 +1,11 @@
 # app/api/user.py
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
 from app.db import supabase
 from app.models import UserUpdate
+import logging
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger("uvicorn.app")
 
 router = APIRouter()
 
@@ -14,8 +17,15 @@ def read_user(user_id: int):
     return user.data
 
 @router.patch("/users/{user_id}")
-def update_user(user_id: int, user_update: UserUpdate):
-    response = supabase.table("test_user").update(user_update.dict()).eq("user_id", user_id).execute()
+async def update_user(user_id: int, user_update: UserUpdate):
+    update_data = user_update.dict(exclude_unset=True)
+    logger.info(f"update_data: {update_data}")
+
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No data provided to update")
+
+    response = supabase.table("test_user").update(update_data).eq("user_id", user_id).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="User not found")
+
     return response.data
