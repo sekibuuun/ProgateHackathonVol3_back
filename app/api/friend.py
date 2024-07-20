@@ -1,17 +1,18 @@
 from fastapi import APIRouter, HTTPException
 from app.db import supabase
+from app.models import FriendRequest
 
 router = APIRouter()
 
 @router.get("/friends/{user_id}")
 def read_friends(user_id: str):
     # まず友達リストを取得
-    friends_response = supabase.table("friend").select("friend_user_id").eq("user_id", user_id).execute()
+    friends_response = supabase.table("friend").select("friend_id").eq("user_id", user_id).execute()
     if not friends_response.data:
         raise HTTPException(status_code=404, detail="Friends not found")
 
     # friend_user_id をリストで取得
-    friend_user_ids = [friend["friend_user_id"] for friend in friends_response.data]
+    friend_user_ids = [friend["friend_id"] for friend in friends_response.data]
 
     # 友達の user_id に基づいて個別にデータを取得
     friends_data = []
