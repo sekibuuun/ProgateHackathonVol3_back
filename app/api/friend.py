@@ -1,6 +1,5 @@
 from fastapi import APIRouter, HTTPException
 from app.db import supabase
-from app.models import FriendRequest
 
 router = APIRouter()
 

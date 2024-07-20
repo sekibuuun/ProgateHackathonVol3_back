@@ -10,7 +10,3 @@ class UserUpdate(BaseModel):
     @field_validator("user_name", "face_img_uri", "github_url", "x_url")
     def empty_string_to_none(cls, v):
         return v if v != "" else None
-
-
-class FriendRequest(BaseModel):
-    friend_user_id: str
