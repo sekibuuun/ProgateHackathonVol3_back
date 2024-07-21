@@ -14,13 +14,14 @@ import logging
 
 router = APIRouter()
 
-# ユーザーIDと顔エンコーディングのペアを保持するクラス
+# Simple cache for image URLs and their corresponding face encodings
+image_cache: Dict[str, List[np.ndarray]] = {}
+
 class KnownFace:
-    def __init__(self, id, face_encoding):
+    def __init__(self, id: str, face_encoding: np.ndarray):
         self.id = id
         self.face_encoding = face_encoding
 
-# Supabaseからデータを取得する関数
 def get_known_faces_data():
     response = supabase.table("users").select("id, face_img_uri").execute()
     if response.data:
@@ -36,17 +37,25 @@ async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = F
     # 既知の顔エンコーディングとそれに対応するユーザーIDのリストを作成
     known_faces = []
     for id, image_url in known_faces_data:
-        response = requests.get(image_url)
-        image = face_recognition.load_image_file(BytesIO(response.content))
-        image = Image.fromarray(image)
-        for angle in range(0, 360, 90):
-            rotated_image = np.array(image.rotate(angle))
-            encodings = face_recognition.face_encodings(rotated_image)
-            if len(encodings) == 0:
-                continue
-            face_encoding = encodings[0]
+        if image_url in image_cache:
+            face_encodings = image_cache[image_url]
+        else:
+            response = requests.get(image_url)
+            image = face_recognition.load_image_file(BytesIO(response.content))
+            image = Image.fromarray(image)
+            face_encodings = []
+            for angle in range(0, 360, 90):
+                rotated_image = np.array(image.rotate(angle))
+                encodings = face_recognition.face_encodings(rotated_image)
+                if len(encodings) == 0:
+                    continue
+                face_encoding = encodings[0]
+                face_encodings.append(face_encoding)
+                break
+            image_cache[image_url] = face_encodings
+        
+        for face_encoding in face_encodings:
             known_faces.append(KnownFace(id=id, face_encoding=face_encoding))
-            break
 
     # アップロードされた写真を読み込む
     group_photo = face_recognition.load_image_file(BytesIO(await file.read()))
