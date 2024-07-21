@@ -1,3 +1,4 @@
+#!/opt/conda/bin/python3.10
 # app/main.py
 from fastapi import FastAPI
 from app.api.user import router as user_router
