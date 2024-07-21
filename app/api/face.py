@@ -15,7 +15,7 @@ import logging
 router = APIRouter()
 
 # Simple cache for image URLs and their corresponding face encodings
-image_cache: Dict[str, List[np.ndarray]] = {}
+image_cache = {}
 
 class KnownFace:
     def __init__(self, id: str, face_encoding: np.ndarray):
