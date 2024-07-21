@@ -60,16 +60,12 @@ async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = F
     # アップロードされた写真を読み込む
     group_photo = face_recognition.load_image_file(BytesIO(await file.read()))
 
-    # 新しい写真から顔の位置を検出
-    face_locations = face_recognition.face_locations(group_photo)
-    logging.getLogger("uvicorn").info(face_locations)
-
-    # 顔が検出されない場合の処理
-    if not face_locations:
-        raise HTTPException(status_code=401, detail="No faces found in the uploaded image")
-
     # 顔エンコーディングを取得
-    face_encodings = face_recognition.face_encodings(group_photo, face_locations)
+    face_encodings = face_recognition.face_encodings(group_photo)
+    if len(face_encodings) == 0:
+        raise HTTPException(status_code=401, detail="No faces found in the uploaded image")
+    elif len(face_encodings) == 1:
+        raise HTTPException(status_code=401, detail="At least two people must be in the image")
 
     # 検出されたユーザーIDを保持するリスト
     detected_ids = []
