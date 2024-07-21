@@ -61,7 +61,8 @@ async def detect_faces_excluding_user(exclude_user_id: str, file: UploadFile = F
     group_photo = face_recognition.load_image_file(BytesIO(await file.read()))
 
     # 顔エンコーディングを取得
-    face_encodings = face_recognition.face_encodings(group_photo)
+    face_locations = face_recognition.face_locations(group_photo)
+    face_encodings = face_recognition.face_encodings(group_photo, face_locations)
     if len(face_encodings) == 0:
         raise HTTPException(status_code=401, detail="No faces found in the uploaded image")
     elif len(face_encodings) == 1:
